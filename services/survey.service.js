@@ -47,7 +47,7 @@ async function updateSurvey(surveyId, userId, data) {
   if (data.description !== undefined) survey.description = data.description;
   if (data.questions !== undefined) survey.questions = data.questions;
   if (data.settings !== undefined) {
-    survey.settings = { ...survey.settings.toObject(), ...data.settings };
+    Object.assign(survey.settings, data.settings);
   }
 
   await survey.save();

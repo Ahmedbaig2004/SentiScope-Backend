@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const authenticate = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 // Validation schemas
 const signupSchema = {
@@ -16,9 +17,9 @@ const loginSchema = {
   password: { required: true, type: 'string' },
 };
 
-// Chain of Responsibility: validate -> controller
-router.post('/signup', validate(signupSchema), authController.signup);
-router.post('/login', validate(loginSchema), authController.login);
+// Chain of Responsibility: rateLimiter -> validate -> controller
+router.post('/signup', authLimiter, validate(signupSchema), authController.signup);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 // Chain: authenticate -> controller
 router.get('/me', authenticate, authController.getMe);
