@@ -12,6 +12,8 @@
 const EventEmitter = require('events');
 const logger = require('../utils/logger');
 const Survey = require('../models/Survey');
+const Response = require('../models/Response');
+const sentimentService = require('../services/sentiment.service');
 
 const surveyEvents = new EventEmitter();
 
@@ -32,13 +34,29 @@ surveyEvents.on('response:submitted', (response) => {
   logger.info(`New response submitted for survey ${response.surveyId} at ${new Date().toISOString()}`);
 });
 
-// Future Listener 3 (placeholder for sentiment analysis):
-// surveyEvents.on('response:submitted', async (response) => {
-//   const textAnswers = response.answers.filter(a => a.type === 'text');
-//   for (const answer of textAnswers) {
-//     const score = await sentimentAnalyzer.analyze(answer.value);
-//     await Response.findByIdAndUpdate(response._id, { ... });
-//   }
-// });
+// Listener 3: Sentiment analysis on text answers (Observer — zero changes to response.service.js)
+surveyEvents.on('response:submitted', async (response) => {
+  try {
+    const textAnswers = response.answers.filter((a) => typeof a.value === 'string');
+
+    if (textAnswers.length === 0) {
+      return;
+    }
+
+    for (const answer of textAnswers) {
+      const sentiment = sentimentService.analyze(answer.value);
+
+      await Response.updateOne(
+        { _id: response._id },
+        { $set: { 'answers.$[elem].sentiment': sentiment } },
+        { arrayFilters: [{ 'elem.questionId': answer.questionId }] }
+      );
+    }
+
+    logger.info(`Sentiment analysis stored for response ${response._id}`);
+  } catch (error) {
+    logger.error(`Failed to analyze sentiment for response ${response._id}: ${error.message}`);
+  }
+});
 
 module.exports = surveyEvents;
