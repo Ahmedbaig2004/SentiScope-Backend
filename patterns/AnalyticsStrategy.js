@@ -8,6 +8,8 @@
 // TextAggregationStrategy changes — nothing else.
 // =============================================
 
+const sentimentService = require('../services/sentiment.service');
+
 // --- Concrete Strategies ---
 
 class MCQAggregationStrategy {
@@ -83,16 +85,26 @@ class NPSAggregationStrategy {
   }
 }
 
+// STRATEGY UPDATED: TextAggregationStrategy now calls SentimentService.
+// All other strategies and the aggregateQuestion context are unchanged.
 class TextAggregationStrategy {
   aggregate(question, answers) {
-    const texts = answers
-      .map((a) => a.value)
-      .filter((v) => typeof v === 'string' && v.trim().length > 0);
+    const textAnswers = answers.filter((a) => typeof a.value === 'string' && a.value.trim().length > 0);
+    const texts = textAnswers.map((a) => a.value);
+    const data = sentimentService.analyzeAll(texts);
+    const total = data.length;
+    const distribution = { positive: 0, neutral: 0, negative: 0 };
+    const scoreSum = data.reduce((sum, item) => {
+      const sentiment = item.sentiment;
+      if (sentiment && distribution[sentiment.label] !== undefined) {
+        distribution[sentiment.label]++;
+        return sum + sentiment.score;
+      }
+      return sum;
+    }, 0);
+    const averageScore = total > 0 ? Number((scoreSum / total).toFixed(2)) : 0;
 
-    // Future: plug in sentiment analysis here
-    // const sentimentResults = await sentimentAnalyzer.analyzeAll(texts);
-
-    return { type: 'text', total: texts.length, data: texts };
+    return { type: 'text', total, averageScore, distribution, data };
   }
 }
 
