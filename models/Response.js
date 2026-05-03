@@ -3,6 +3,11 @@ const mongoose = require('mongoose');
 const answerSchema = new mongoose.Schema({
   questionId: { type: mongoose.Schema.Types.ObjectId, required: true },
   value: { type: mongoose.Schema.Types.Mixed, required: true },
+  sentiment: {
+    score: { type: Number },
+    label: { type: String, enum: ['positive', 'neutral', 'negative'] },
+    tokenCount: { type: Number },
+  },
 });
 
 const responseSchema = new mongoose.Schema({
